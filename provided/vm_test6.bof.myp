@@ -1,0 +1,69 @@
+Loading program from provided/vm_test6.bof:
+Instruction 0: 842223426
+Instruction 1: 0
+Instruction 2: 24
+Instruction 3: 1024
+Instruction 4: 3
+Instruction 5: 4096
+Instruction 6: 130962
+Instruction 7: 1073283088
+Instruction 8: -2146107503
+Instruction 9: 805371921
+Instruction 10: 268435472
+Instruction 11: 805371921
+Instruction 12: 268697617
+Instruction 13: -1878982592
+Instruction 14: 269352977
+Instruction 15: -1878982576
+Instruction 16: -1610285168
+Instruction 17: 805175313
+Instruction 18: -1610285040
+Instruction 19: 1343226001
+Instruction 20: 1880162561
+Instruction 21: 1611792513
+Instruction 22: 805371921
+Instruction 23: 268501009
+Instruction 24: -2146828271
+Instruction 25: 1075183633
+Instruction 26: 1611071249
+Instruction 27: 1879506833
+Instruction 28: 805437457
+Instruction 29: -268369919
+Instruction 30: 1
+Instruction 31: 0
+Instruction 32: 0
+Finished loading program. Total instructions: 33
+Loaded Program:
+0: 842223426
+1: 0
+2: 24
+3: 1024
+4: 3
+5: 4096
+6: 130962
+7: 1073283088
+8: -2146107503
+9: 805371921
+10: 268435472
+11: 805371921
+12: 268697617
+13: -1878982592
+14: 269352977
+15: -1878982576
+16: -1610285168
+17: 805175313
+18: -1610285040
+19: 1343226001
+20: 1880162561
+21: 1611792513
+22: 805371921
+23: 268501009
+24: -2146828271
+25: 1075183633
+26: 1611071249
+27: 1879506833
+28: 805437457
+29: -268369919
+30: 1
+31: 0
+32: 0

@@ -1,0 +1,26 @@
+Loading program from provided/vm_testA.bof:
+Instruction 0: 842223426
+Instruction 1: 0
+Instruction 2: 13
+Instruction 3: 1024
+Instruction 4: 3
+Instruction 5: 4096
+Instruction 6: 805371921
+Instruction 7: -65514
+Instruction 8: 285212561
+Instruction 9: -16711788
+Instruction 10: 393116
+Instruction 11: -134283263
+Instruction 12: -268304383
+Instruction 13: -134348799
+Instruction 14: -268369919
+Instruction 15: -134283263
+Instruction 16: -268304255
+Instruction 17: -134348799
+Instruction 18: -268369791
+Instruction 19: 2649
+Instruction 20: 683886
+Instruction 21: 10
+Finished loading program. Total instructions: 22
+Starting program execution...
+Executing instruction at ip=0: 842223426

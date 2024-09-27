@@ -1,0 +1,21 @@
+Loading program from provided/vm_test0.bof:
+Instruction 0: 842223426
+Instruction 1: 0
+Instruction 2: 3
+Instruction 3: 1024
+Instruction 4: 0
+Instruction 5: 4096
+Instruction 6: -134348799
+Instruction 7: 196498
+Instruction 8: -268369919
+Finished loading program. Total instructions: 9
+Loaded Program:
+0: 842223426
+1: 0
+2: 3
+3: 1024
+4: 0
+5: 4096
+6: -134348799
+7: 196498
+8: -268369919

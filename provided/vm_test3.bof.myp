@@ -1,0 +1,61 @@
+Loading program from provided/vm_test3.bof:
+Instruction 0: 842223426
+Instruction 1: 0
+Instruction 2: 20
+Instruction 3: 1024
+Instruction 4: 3
+Instruction 5: 4096
+Instruction 6: -134348799
+Instruction 7: 1966098
+Instruction 8: 805371921
+Instruction 9: 1310738
+Instruction 10: 655378
+Instruction 11: 196764
+Instruction 12: 174
+Instruction 13: 301
+Instruction 14: 222
+Instruction 15: 301
+Instruction 16: -134283263
+Instruction 17: -268304255
+Instruction 18: 15
+Instruction 19: -134283263
+Instruction 20: -268304127
+Instruction 21: 15
+Instruction 22: -134348799
+Instruction 23: -268369791
+Instruction 24: -134348799
+Instruction 25: -268369919
+Instruction 26: 33
+Instruction 27: 2649
+Instruction 28: 683854
+Finished loading program. Total instructions: 29
+Loaded Program:
+0: 842223426
+1: 0
+2: 20
+3: 1024
+4: 3
+5: 4096
+6: -134348799
+7: 1966098
+8: 805371921
+9: 1310738
+10: 655378
+11: 196764
+12: 174
+13: 301
+14: 222
+15: 301
+16: -134283263
+17: -268304255
+18: 15
+19: -134283263
+20: -268304127
+21: 15
+22: -134348799
+23: -268369791
+24: -134348799
+25: -268369919
+26: 33
+27: 2649
+28: 683854
