@@ -1,6 +1,7 @@
 #include "vm.h"
 #include <stdio.h>
 #include <stdlib.h>
+#include "../provided/bof.h"
 
 // Initialize the VM with default values
 void vm_init(VM *vm) {
@@ -20,7 +21,17 @@ void vm_load_program(VM *vm, const char *filename) {
     printf("Loading program from %s:\n", filename);
 
     // Read the instructions into the program array
-    int32_t instruction;
+
+    BOFFILE bf_file = bof_read_open(filename);
+    BOFHeader bf_header = bof_read_header(bf_file);
+
+    vm->pc = bf_header.text_start_address;
+    vm->gp = bf_header.data_start_address;
+    vm->fp = bf_header.stack_bottom_addr;
+
+    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp);
+
+    /*int32_t instruction;
     while (fread(&instruction, sizeof(int32_t), 1, file) == 1) {
         vm->program[vm->program_size] = instruction;
         printf("Instruction %d: %d\n", vm->program_size, instruction);  // Debug: Print the loaded instruction
@@ -29,6 +40,8 @@ void vm_load_program(VM *vm, const char *filename) {
 
     fclose(file);
     printf("Finished loading program. Total instructions: %d\n", vm->program_size);  // Debug: Total program size
+    */
+
 }
 
 // Print the loaded program for listing (-p flag)

@@ -9,7 +9,10 @@
 // Define the structure of the VM
 typedef struct {
     int32_t stack[STACK_SIZE];  // Stack for the machine
+    int32_t pc;                 // Program Counter
+    int32_t gp;                 // Global pointer
     int32_t sp;                 // Stack pointer
+    int32_t fp;                 // Frame pointer
     int32_t ip;                 // Instruction pointer
     int32_t program[STACK_SIZE]; // Program memory (loaded instructions)
     int32_t program_size;       // Size of the loaded program
