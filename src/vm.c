@@ -40,6 +40,12 @@ void vm_load_program(VM *vm, const char *filename) {
         printf("Instruction: %s\n", ins);
     }
 
+    for (int i = 0; i < bf_header.data_length; i++) {
+        word_type word = bof_read_word(bf_file);
+        memory.words[i] = word;
+        printf("Word: %d", word);
+    }
+
 }
 
 // Print the loaded program for listing (-p flag)
