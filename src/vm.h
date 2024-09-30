@@ -21,6 +21,7 @@ bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
 
 // Define the structure of the VM
 typedef struct {
+    BOFHeader bf_header;        // Loaded BOF Header
     int32_t stack[STACK_SIZE];  // Stack for the machine
     int32_t pc;                 // Program Counter
     int32_t gp;                 // Global pointer

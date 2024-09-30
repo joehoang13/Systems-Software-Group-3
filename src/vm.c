@@ -25,34 +25,36 @@ void vm_load_program(VM *vm, const char *filename) {
 
     BOFFILE bf_file = bof_read_open(filename);
     BOFHeader bf_header = bof_read_header(bf_file);
+    vm->bf_header = bf_header; 
 
     vm->pc = bf_header.text_start_address;
     vm->gp = bf_header.data_start_address;
     vm->fp = bf_header.stack_bottom_addr;
     vm->sp = bf_header.stack_bottom_addr;
 
-    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp); //Debug: Get Header Values
-    printf("Text Length:%d\n", bf_header.text_length); //Debug: Num Instructions
     for (int i = 0; i < bf_header.text_length; i++) {
         bin_instr_t instr = instruction_read(bf_file);
         memory.instrs[i] = instr;
-        char* ins = instruction_assembly_form(i, instr);
-        printf("Instruction: %s\n", ins);
     }
 
     for (int i = 0; i < bf_header.data_length; i++) {
         word_type word = bof_read_word(bf_file);
         memory.words[i] = word;
-        printf("Word: %d", word);
     }
-
 }
 
 // Print the loaded program for listing (-p flag)
 void vm_print_program(VM *vm) {
-    printf("Loaded Program:\n");
-    for (int i = 0; i < vm->program_size; i++) {
-        printf("%d: %d\n", i, vm->program[i]);
+    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp); //Debug: Get Header Values
+    printf("Text Length:%d\n", vm->bf_header.text_length); //Debug: Num Instructions
+
+    for (int i = 0; i < vm->bf_header.text_length; i++) {
+        char* ins = instruction_assembly_form(i, memory.instrs[i]);
+        printf("Instruction: %s\n", ins);
+    }
+    
+    for (int i = 0; i < vm->bf_header.data_length; i++) {
+        printf("Word: %d\n", memory.words[i]);
     }
 }
 
