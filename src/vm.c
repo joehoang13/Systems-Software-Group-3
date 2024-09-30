@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include "../provided/bof.h"
+#include "../provided/machine_types.h"
 
 // Initialize the VM with default values
 void vm_init(VM *vm) {
@@ -28,19 +29,16 @@ void vm_load_program(VM *vm, const char *filename) {
     vm->pc = bf_header.text_start_address;
     vm->gp = bf_header.data_start_address;
     vm->fp = bf_header.stack_bottom_addr;
+    vm->sp = bf_header.stack_bottom_addr;
 
-    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp);
-
-    /*int32_t instruction;
-    while (fread(&instruction, sizeof(int32_t), 1, file) == 1) {
-        vm->program[vm->program_size] = instruction;
-        printf("Instruction %d: %d\n", vm->program_size, instruction);  // Debug: Print the loaded instruction
-        vm->program_size++;
+    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp); //Debug: Get Header Values
+    printf("Text Length:%d\n", bf_header.text_length); //Debug: Num Instructions
+    for (int i = 0; i < bf_header.text_length; i++) {
+        bin_instr_t instr = instruction_read(bf_file);
+        memory.instrs[i] = instr;
+        char* ins = instruction_assembly_form(i, instr);
+        printf("Instruction: %s\n", ins);
     }
-
-    fclose(file);
-    printf("Finished loading program. Total instructions: %d\n", vm->program_size);  // Debug: Total program size
-    */
 
 }
 

@@ -2,9 +2,22 @@
 #define VM_H
 
 #include <stdint.h>
+#include "../provided/machine_types.h"
+#include "../provided/instruction.h"
 
 // Max stack size
 #define STACK_SIZE 1024
+
+// Word size
+#define WORD_IN_BITS 32
+
+#define MEMORY_SIZE_IN_WORDS 32768
+
+static union mem_u {
+word_type words[MEMORY_SIZE_IN_WORDS];
+uword_type uwords[MEMORY_SIZE_IN_WORDS];
+bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
+} memory;
 
 // Define the structure of the VM
 typedef struct {
