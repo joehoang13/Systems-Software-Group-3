@@ -16,7 +16,9 @@ EXECUTABLE = vm
 
 # Source and object files
 VM_SOURCES = $(SRC_DIR)/vm_main.c $(SRC_DIR)/vm.c
-VM_OBJECTS = $(OBJ_DIR)/vm_main.o $(OBJ_DIR)/vm.o
+VM_OBJECTS = $(OBJ_DIR)/vm_main.o $(OBJ_DIR)/vm.o\
+             $(PROVIDED_DIR)/machine_types.o $(PROVIDED_DIR)/instruction.o $(PROVIDED_DIR)/bof.o \
+             $(PROVIDED_DIR)/regname.o $(PROVIDED_DIR)/utilities.o
 
 # Test binary files
 TEST_BOF_FILES = $(wildcard $(TEST_DIR)/*.bof)
