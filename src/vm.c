@@ -125,67 +125,86 @@ void vm_run(VM *vm) {
     print_stack(vm);
 
     for (int i=0; i<vm->bf_header.text_length; i++){
-        instr_type opC = instruction_type(memory.instrs[i]);
-        if(opC == 0){
-            int binary = memory.instrs[i].comp.func;
-            int decim = 0;
-            int power = 1;
-                while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
+         instr_type opC = instruction_type(memory.instrs[i]);
+            if(opC == comp_instr_type)
+            {
+                int func = memory.instrs[i].comp.func;
+                switch (func){
+                    case NOP_F:
+                        //Literally does nothing.
+                    case ADD_F:
+                    case SUB_F:
+                    case CPW_F:
+                    case AND_F:
+                    case BOR_F:
+                    case NOR_F:
+                    case XOR_F:
+                    case LWR_F:
+                    case SWR_F:
+                    case SCA_F:
+                    case LWI_F:
+                    case NEG_F:
                 }
-            printf("This is the func in INT: %d",decim);
-            switch (decim){
-                case NOP_F:
-                    //Literally does nothing.
-                case ADD_F:
-                case SUB_F:
-                case CPW_F:
-                case AND_F:
-                case BOR_F:
-                case NOR_F:
-                case XOR_F:
-                case LWR_F:
-                case SWR_F:
-                case SCA_F:
-                case LWI_F:
-                case NEG_F:
             }
-        }
-        if(opC == 1){
-            int binary = memory.instrs[i].comp.func;
-            int decim = 0;
-            int power = 1;
-                while(binary != 0){
-                decim += (binary % 10) *power;
-                binary /= 10;
-                power *= 2;
+            if(opC == other_comp_instr_type){
+                int func = memory.instrs[i].comp.func;
+
+                switch(func){
+                    case LIT_F:
+                    case ARI_F:
+                    case SRI_F:
+                    case MUL_F:
+                    case DIV_F:
+                    case CFHI_F:
+                    case CFLO_F:
+                    case SLL_F:
+                    case SRL_F:
+                    case JMP_F:
+                    case CSI_F:
+                    case JREL_F:
                 }
-
-            switch(decim){
-                case LIT_F:
-                case ARI_F:
-                case SRI_F:
-                case MUL_F:
-                case DIV_F:
-                case CFHI_F:
-                case CFLO_F:
-                case SLL_F:
-                case SRL_F:
-                case JMP_F:
-                case CSI_F:
-                case JREL_F:
             }
-        }
+            if(opC == immed_instr_type){
+                int op = memory.instrs[i].immed.op;
+                switch(op){
+                    //
+                    case ADDI_O:
+                    //ADDI
+                    case ANDI_O:
+                    //
+                    case BORI_O:
+                    //
+                    case NORI_O:
+                    //
+                    case XORI_O:
+                    //
+                    case BEQ_O:
+                    //
+                    case BGEZ_O:
+                    //
+                    case BGTZ_O:
+                    //
+                    case BLEZ_O:
+                    //
+                    case BLTZ_O:
+                    //
+                    case BNE_O:
+                    //
+                }
+            }
+            if (opC == jump_instr_type){
+                int binary = memory.instrs[i].jump.op;
+                switch(binary){
+                    case JMPA_O:
+                    //
+                    case CALL_O:
+                    //
+                    case RTN_O:
+                    //
+                }
+            }
+            if (opC == syscall_instr_type){
+                int binary = memory.instrs[i].syscall.func;
+            }
     }
-        
-
-    // Debug: Print the current state of the stack after every instruction
-    /*printf("Stack state (sp=%d): [", vm->registers[1]);
-    for (int i = 0; i <= vm->registers[1]; i++) {
-        printf("%d", vm->stack[i]);
-        if (i < vm->registers[1]) printf(", ");
-    }
-    printf("]\n");*/
 }
