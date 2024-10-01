@@ -11,14 +11,24 @@ int main(int argc, char *argv[]) {
 
     VM vm;
     vm_init(&vm);
-
     // Check if the -p flag is present
     if (argc == 3 && strcmp(argv[1], "-p") == 0) {
         vm_load_program(&vm, argv[2]);
         vm_print_program(&vm);
     } else if (argc == 2) {
         vm_load_program(&vm, argv[1]);
-        vm_run(&vm);
+        print_registers(&vm);
+        print_words(&vm);
+        print_stack(&vm);
+        for (int i = 0; i < vm.program_size; i++) {
+            print_instruction(&vm, vm.pc);
+            vm_run(&vm, vm.pc);
+            if (vm.tracing) {
+                print_registers(&vm);
+                print_words(&vm);
+                print_stack(&vm);
+            }
+        }
     } else {
         fprintf(stderr, "Invalid arguments.\n");
         return EXIT_FAILURE;
