@@ -20,7 +20,6 @@ void vm_load_program(VM *vm, const char *filename) {
     }
 
     // Read the instructions into the program array
-
     BOFFILE bf_file = bof_read_open(filename);
     BOFHeader bf_header = bof_read_header(bf_file);
     vm->bf_header = bf_header; 
@@ -30,15 +29,15 @@ void vm_load_program(VM *vm, const char *filename) {
     vm->fp = bf_header.stack_bottom_addr;
     vm->sp = bf_header.stack_bottom_addr;
 
-    for (int i = 0; i < bf_header.text_length; i++) {
-        bin_instr_t instr = instruction_read(bf_file);
-        memory.instrs[i] = instr;
-        printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
+    vm->program_size = bf_header.text_length;
+
+    for (int i = 0; i < vm->program_size; i++) {
+        memory.instrs[i] = instruction_read(bf_file);
     }
 
     for (int i = 0; i < bf_header.data_length; i++) {
         word_type word = bof_read_word(bf_file);
-        memory.words[i] = word;
+        memory.words[vm->program_size + i] = word;
     }
 }
 
@@ -46,24 +45,31 @@ void vm_load_program(VM *vm, const char *filename) {
 void vm_print_program(VM *vm) {
     printf("Address Instruction\n");
 
-    for (int i = 0; i < vm->bf_header.text_length; i++) {
+    for (int i = 0; i < vm->program_size; i++) {
         printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
     }
     int index = 0;
 
     for (index; index < vm->bf_header.data_length; index++) {
         if (index % 5 == 0 && index != 0) {
-            printf("\n\t");
+            printf("\n");
         }
-        printf("%8d: %d\t", vm->gp, memory.words[index]);
+        printf("%8d: %d\t", vm->gp, memory.words[vm->program_size + index]);
         vm->gp++;
     }
     printf("%8d: %d\t", vm->gp, 0);
     if ((index+1) % 5 == 0) {
-        printf("\n\t");
+        printf("\n%11s     \n", "...");
     }
-    
-    printf("...\n");
+    else if ((index+1) % 4 == 0) {
+        printf("%11s     \n\n", "...");
+    }
+    else if ((index+1) % 3 == 0) {
+        printf("%11s     \n\n", "...");
+    }
+    else {
+        printf("%11s     \n", "...");
+    }
 }
 
 // Simple Stack Machine execution with detailed debugging
