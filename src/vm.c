@@ -136,9 +136,21 @@ void vm_run(VM *vm, int instruction_number) {
             case SUB_F:
             case CPW_F:
             case AND_F:
+                vm->stack[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = vm->stack[vm->registers[1]] & vm->stack[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->stack_indexes[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]];
+                break;
             case BOR_F:
+                vm->stack[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = vm->stack[vm->registers[1]] | vm->stack[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->stack_indexes[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]];
+                break;
             case NOR_F:
-            case XOR_F:
+                vm->stack[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = ~(vm->stack[vm->registers[1]] | vm->stack[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]]);
+                vm->stack_indexes[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]];
+                break;
+            case XOR_F: 
+                vm->stack[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = vm->stack[vm->registers[1]] ^ vm->stack[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->stack_indexes[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]];
+                break;
             case LWR_F:
             case SWR_F:
             case SCA_F:
