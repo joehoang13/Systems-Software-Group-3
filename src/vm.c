@@ -122,6 +122,7 @@ void print_stack(VM *vm) {
 
 // Simple Stack Machine execution with detailed debugging
 void vm_run(VM *vm, int instruction_number) {
+    bin_instr_t instr = memory.instrs[instruction_number];
     instr_type opC = instruction_type(memory.instrs[instruction_number]);
     if(opC == comp_instr_type)
     {
@@ -130,35 +131,99 @@ void vm_run(VM *vm, int instruction_number) {
             case NOP_F:
                 //Literally does nothing.
             case ADD_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = vm->registers[1] + (vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.ot)]);
+                break;
             case SUB_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = vm->registers[1] - (vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.ot)]);
+                break;
             case CPW_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.ot)];
+                break;
             case AND_F:
+
+                break;
             case BOR_F:
+
+                break;
             case NOR_F:
+
+                break;
             case XOR_F:
+
+                break;
             case LWR_F:
+                instr.comp.rt = vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.os)];
+                break;
             case SWR_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = instr.comp.rs;
+                break;
             case SCA_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = (instr.comp.rs + machine_types_formOffset(instr.comp.os));
+                break;
             case LWI_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = vm->stack[vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.rs)]];
+                break;
             case NEG_F:
+                vm->stack[instr.comp.rt + machine_types_formOffset(instr.comp.ot)] = -vm->stack[instr.comp.rs + machine_types_formOffset(instr.comp.os)];
+                break;
         }
     }
     if(opC == other_comp_instr_type){
-        int func = memory.instrs[instruction_number].comp.func;
+        int func = memory.instrs[instruction_number].othc.func;
 
         switch(func){
             case LIT_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = machine_types_sgnExt(instr.othc.arg);
+                break;
             case ARI_F:
+                instr.othc.reg = (instr.othc.reg + machine_types_sgnExt(instr.othc.arg));
+                break;
             case SRI_F:
+                instr.othc.reg = (instr.othc.reg - machine_types_sgnExt(instr.othc.arg));
+                break;
             case MUL_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] * (vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)]);
+                break;
             case DIV_F:
+                vm->HI = vm->stack[vm->registers[1]] % (vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)]); vm->LO = vm->stack[vm->registers[1]] / (vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)]);
+                break;
             case CFHI_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = vm->HI;
+                break;
             case CFLO_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = vm->LO;
+                break;
             case SLL_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] << instr.othc.arg;
+                break;
             case SRL_F:
+                vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] >> instr.othc.arg;
+                break;
             case JMP_F:
+                vm->pc = vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)];
+                break;
             case CSI_F:
+                vm->registers[7] = vm->pc;  vm->pc = vm->stack[instr.othc.reg + machine_types_formOffset(instr.othc.offset)];
+                break;
             case JREL_F:
+                vm->pc = ((vm->pc - 1) + machine_types_formOffset(instr.othc.offset));
+                break;
+            case 15:
+                int sys = memory.instrs[instruction_number].syscall.code;
+                switch(sys){
+                    case exit_sc:
+
+                    case print_str_sc:
+
+                    case print_char_sc:
+
+                    case read_char_sc:
+
+                    case start_tracing_sc:
+
+                    case stop_tracing_sc:
+                    
+                }
         }
     }
     if(opC == immed_instr_type){
@@ -201,13 +266,6 @@ void vm_run(VM *vm, int instruction_number) {
             //
         }
     }
-    if (opC == syscall_instr_type){
-        int binary = memory.instrs[instruction_number].syscall.func;
-        switch(binary) {
-            case exit_sc:
-                vm->tracing = false;
-                break;
-        }
-    }
+    
     vm->pc++;
 }
