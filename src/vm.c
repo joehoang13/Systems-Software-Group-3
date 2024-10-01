@@ -123,179 +123,88 @@ void vm_run(VM *vm) {
     print_registers(vm);
     print_words(vm);
     print_stack(vm);
-    for (int i=0; i<0; i++){
-         instr_type * opC = instruction_type(memory.instrs[i]);
-            if(opC == 0){
-               int binary = memory.instrs[i].comp.func;
-                int decim = 0;
-                int power = 1;
-                    while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
-                    }
-                printf("This is the func in INT: %d",decim);
-                switch (decim){
+
+    for (int i=0; i<vm->bf_header.text_length; i++){
+         instr_type opC = instruction_type(memory.instrs[i]);
+            if(opC == comp_instr_type)
+            {
+                int func = memory.instrs[i].comp.func;
+                switch (func){
                     case NOP_F:
                         //Literally does nothing.
                     case ADD_F:
-                        memory[GPR[Op0->ot] + formOffset(Op0->os)] = memory[GPR[$sp]] + (memory[GPR[s] + formOffset(os)]);
                     case SUB_F:
-                        memory[GPR[t] + formOffset(ot)] = memory[GPR[$sp]] − (memory[GPR[s] + formOffset(os)]);
                     case CPW_F:
-                        memory[GPR[t] + formOffset(ot)] = memory[GPR[s] + formOffset(os)];
                     case AND_F:
-                        umemory[GPR[t] + formOffset(ot)]; = umemory[GPR[$sp]] ∧ (umemory[GPR[s] + formOffset(os)]);
                     case BOR_F:
-                        umemory[GPR[t] + formOffset(ot)]; = umemory[GPR[$sp]] ∨ (umemory[GPR[s] + formOffset(os)]);
                     case NOR_F:
-                        umemory[GPR[t] + formOffset(ot)];= -(umemory[GPR[$sp]] ∨ (umemory[GPR[s] + formOffset(os)]));
                     case XOR_F:
-                        umemory[GPR[t] + formOffset(ot)]; ← umemory[GPR[$sp]] xor (umemory[GPR[s] + formOffset(os)]);
                     case LWR_F:
-                        GPR[t] ← memory[GPR[s] + formOffset(os)];
                     case SWR_F:
-                        memory[GPR[t] + formOffset(ot)] ← GPR[s];
                     case SCA_F:
-                        memory[GPR[t] + formOffset(ot)] ← (GPR[s] + formOffset(os));
                     case LWI_F:
-                        memory[GPR[t] + formOffset(ot)] ← memory[memory[GPR[s] + formOffset(os)]];
                     case NEG_F:
-                        memory[GPR[t] + formOffset(ot)] ← −memory[GPR[s] + formOffset(os)];
-            }
-            if(opC == 1){
-               int binary = memory.instrs[i].comp.func;
-                int decim = 0;
-                int power = 1;
-                    while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
-                    }
-                    printf("This is the func in INT: %d",decim);
-
-                switch(decim){
-                case LIT_F:
-                    memory[GPR[t] + formOffset(o)] ← sgnExt(i)
-                case ARI_F:
-                    GPR[r] ← (GPR[r] + sgnExt(i))
-                case SRI_F:
-                    GPR[r] ← (GPR[r] − sgnExt(i))
-                case MUL_F:
-                    [GPR[s] + formOffset(o)]← memory[GPR[$sp]] × (memory[GPR[s] + formOffset(o)])
-                case DIV_F:
-                    HI ← memory[GPR[$sp]] % (memory[GPR[s] + formOffset(o)]); LO ← memory[GPR[$sp]] / (memory[GPR[s] + formOffset(o)])
-                case CFHI_F:
-                    memory[GPR[t] + formOffset(o)] ← HI
-                case CFLO_F:
-                    memory[GPR[t] + formOffset(o)] ← LO
-                case SLL_F:
-                    umemory[GPR[t] + formOffset(o)] ← umemory[GPR[$sp]] « h
-                case SRL_F:
-                    umemory[GPR[t] + formOffset(o)] ← umemory[GPR[$sp]] » h
-                case JMP_F:
-                    PC ← umemory[GPR[s] + formOffset(o)];
-                case CSI_F:
-                    GPR[$ra] ← PC; PC ← memory[GPR[s] + formOffset(o)]
-                case JREL_F:
-                    PC ← ((PC − 1) + formOffset(o));
                 }
             }
-            if(opC == 2){
-                int binary = memory.instrs[i].immed.op;
-                int decim = 0;
-                int power = 1;
-                    while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
-                    }
-                    printf("This is the func in INT: %d",decim);
-                switch(decim){
+            if(opC == other_comp_instr_type){
+                int func = memory.instrs[i].comp.func;
+
+                switch(func){
+                    case LIT_F:
+                    case ARI_F:
+                    case SRI_F:
+                    case MUL_F:
+                    case DIV_F:
+                    case CFHI_F:
+                    case CFLO_F:
+                    case SLL_F:
+                    case SRL_F:
+                    case JMP_F:
+                    case CSI_F:
+                    case JREL_F:
+                }
+            }
+            if(opC == immed_instr_type){
+                int op = memory.instrs[i].immed.op;
+                switch(op){
                     //
                     case ADDI_O:
                     //ADDI
-                            memory.instrs[] + formOffset(OpOther->offset) = (memory.words[OpOther->reg] + formOffset(o)) + sgnExt(i)
-                            
                     case ANDI_O:
                     //
-                            umemory[GPR[r] + formOffset(o)] ← (umemory[GPR[r] + formOffset(o)]) ∧ zeroExt(i)
                     case BORI_O:
                     //
-                            umemory[GPR[r] + formOffset(o)] ← (umemory[GPR[r] + formOffset(o)]) ∨ zeroExt(i)
                     case NORI_O:
                     //
-                            umemory[GPR[r] + formOffset(o)] ← ¬(umemory[GPR[r] + formOffset(o)]) ∨ zeroExt(i))
                     case XORI_O:
                     //
-                            umemory[GPR[r] + formOffset(o)] ← (umemory[GPR[r] + formOffset(o)]) xor zeroExt(i)
                     case BEQ_O:
                     //
-                            if memory[GPR[$sp]] = memory[GPR[r] + formOffset(o)] then PC ← (PC − 1) + formOffset(i)
                     case BGEZ_O:
                     //
-                            if memory[GPR[r] + formOffset(o)] ≥ 0   then PC ← (PC − 1) + formOffset(i)
                     case BGTZ_O:
                     //
-                            if memory[GPR[r] + formOffset(o)] > 0 then PC ← (PC − 1) + formOffset(i)
                     case BLEZ_O:
                     //
-                            if memory[GPR[r] + formOffset(o)] ≤ 0 then PC ← (PC − 1) + formOffset(i)
                     case BLTZ_O:
                     //
-                            if memory[GPR[r] + formOffset(o)] < 0 then PC ← (PC − 1) + formOffset(i)
                     case BNE_O:
                     //
-                            if memory[GPR[$sp]] != memory[GPR[r] + formOffset(o)] then PC ← (PC − 1) + formOffset(i)
                 }
-                if (opC == 3){
+            }
+            if (opC == jump_instr_type){
                 int binary = memory.instrs[i].jump.op;
-                int decim = 0;
-                int power = 1;
-                    while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
-                    }
-                    printf("This is the func in INT: %d",decim);
-                switch(decim){
+                switch(binary){
                     case JMPA_O:
                     //
-                        PC ← formAddress(P C − 1, a)
                     case CALL_O:
                     //
-                        GPR[$ra] ← PC; PC ← formAddress(PC − 1, a)
                     case RTN_O:
                     //
-                        PC ← GPR[$ra]
-                    }
                 }
-                if (opC == 4){
-                int binary = memory.instrs[i].syscall.func;
-                int decim = 0;
-                int power = 1;
-                    while(binary != 0){
-                    decim += (binary % 10) *power;
-                    binary /= 10;
-                    power *= 2;
-                    }
-                    printf("This is the func in INT: %d",decim);
-                }
-            default:
-                fprintf(stderr, "Unknown instruction: %d at ip=%d\n", instruction, vm->ip - 1);  // Debug: Unknown instruction
-                exit(EXIT_FAILURE);
             }
-        }
-    }
-        
-    
-
-        // Debug: Print the current state of the stack after every instruction
-        printf("Stack state (sp=%d): [", vm->registers[1]);
-        for (int i = 0; i <= vm->registers[1]; i++) {
-            printf("%d", vm->stack[i]);
-            if (i < vm->registers[1]) printf(", ");
-        }
-        printf("]\n");
+            if (opC == syscall_instr_type){
+                int binary = memory.instrs[i].syscall.func;
+            }
     }
 }
