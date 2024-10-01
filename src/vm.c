@@ -19,8 +19,6 @@ void vm_load_program(VM *vm, const char *filename) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Loading program from %s:\n", filename);
-
     // Read the instructions into the program array
 
     BOFFILE bf_file = bof_read_open(filename);
@@ -35,6 +33,7 @@ void vm_load_program(VM *vm, const char *filename) {
     for (int i = 0; i < bf_header.text_length; i++) {
         bin_instr_t instr = instruction_read(bf_file);
         memory.instrs[i] = instr;
+        printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
     }
 
     for (int i = 0; i < bf_header.data_length; i++) {
@@ -45,17 +44,26 @@ void vm_load_program(VM *vm, const char *filename) {
 
 // Print the loaded program for listing (-p flag)
 void vm_print_program(VM *vm) {
-    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp); //Debug: Get Header Values
-    printf("Text Length:%d\n", vm->bf_header.text_length); //Debug: Num Instructions
+    printf("Address Instruction\n");
 
     for (int i = 0; i < vm->bf_header.text_length; i++) {
-        char* ins = instruction_assembly_form(i, memory.instrs[i]);
-        printf("Instruction: %s\n", ins);
+        printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
+    }
+    int index = 0;
+
+    for (index; index < vm->bf_header.data_length; index++) {
+        if (index % 5 == 0 && index != 0) {
+            printf("\n\t");
+        }
+        printf("%8d: %d\t", vm->gp, memory.words[index]);
+        vm->gp++;
+    }
+    printf("%8d: %d\t", vm->gp, 0);
+    if ((index+1) % 5 == 0) {
+        printf("\n\t");
     }
     
-    for (int i = 0; i < vm->bf_header.data_length; i++) {
-        printf("Word: %d\n", memory.words[i]);
-    }
+    printf("...\n");
 }
 
 // Simple Stack Machine execution with detailed debugging
