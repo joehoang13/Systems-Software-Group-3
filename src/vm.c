@@ -119,7 +119,7 @@ void print_stack(VM *vm) {
 }
 
 // Simple Stack Machine execution with detailed debugging
-void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t *OpOther) {
+void vm_run(VM *vm) {
     print_registers(vm);
     print_words(vm);
     print_stack(vm);
@@ -172,6 +172,7 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
                     binary /= 10;
                     power *= 2;
                     }
+                    printf("This is the func in INT: %d",decim);
 
                 switch(decim){
                 case LIT_F:
@@ -201,7 +202,7 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
                 }
             }
             if(opC == 2){
-               int binary = memory.instrs[i].comp.func;
+                int binary = memory.instrs[i].immed.op;
                 int decim = 0;
                 int power = 1;
                     while(binary != 0){
@@ -209,6 +210,7 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
                     binary /= 10;
                     power *= 2;
                     }
+                    printf("This is the func in INT: %d",decim);
                 switch(decim){
                     //
                     case ADDI_O:
@@ -246,15 +248,16 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
                     //
                             if memory[GPR[$sp]] != memory[GPR[r] + formOffset(o)] then PC ← (PC − 1) + formOffset(i)
                 }
-                if(opC == 3){
-                    int binary = memory.instrs[i].comp.func;
-                    int decim = 0;
-                    int power = 1;
-                        while(binary != 0){
-                        decim += (binary % 10) *power;
-                        binary /= 10;
-                        power *= 2;
-                        }
+                if (opC == 3){
+                int binary = memory.instrs[i].jump.op;
+                int decim = 0;
+                int power = 1;
+                    while(binary != 0){
+                    decim += (binary % 10) *power;
+                    binary /= 10;
+                    power *= 2;
+                    }
+                    printf("This is the func in INT: %d",decim);
                 switch(decim){
                     case JMPA_O:
                     //
@@ -266,10 +269,24 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
                     //
                         PC ← GPR[$ra]
                     }
+                }
+                if (opC == 4){
+                int binary = memory.instrs[i].syscall.func;
+                int decim = 0;
+                int power = 1;
+                    while(binary != 0){
+                    decim += (binary % 10) *power;
+                    binary /= 10;
+                    power *= 2;
+                    }
+                    printf("This is the func in INT: %d",decim);
+                }
             default:
                 fprintf(stderr, "Unknown instruction: %d at ip=%d\n", instruction, vm->ip - 1);  // Debug: Unknown instruction
                 exit(EXIT_FAILURE);
             }
+        }
+    }
         
     
 
