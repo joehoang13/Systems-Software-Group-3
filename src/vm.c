@@ -104,28 +104,31 @@ void print_words(VM *vm) {
 
 void print_stack(VM *vm) {
     bool dots_printed = false;
-    for (int i = vm->registers[1]; i <= vm->bf_header.stack_bottom_addr; i++) {
-        if (i % 5 == 0) {
+    int count = 0;
+    for (int i = 1024; i <= vm->bf_header.stack_bottom_addr; i++) {
+        if (count % 5 == 0 && count != 0) {
             printf("\n");
         }
         if (vm->stack_indexes[i] == 0) {
-            if (!dots_printed) {
+            if (!dots_printed && count > 0) {
                 printf("...");
                 dots_printed = true;
             }
             continue;
         }
         printf("%8d: %d\t", i, vm->stack[i]);
+        count++;
     }
-    printf("\n");
+    printf("\n\n");
 }
 
 // Simple Stack Machine execution with detailed debugging
 void vm_run(VM *vm, int instruction_number) {
+    bin_instr_t instr = memory.instrs[instruction_number];
     instr_type opC = instruction_type(memory.instrs[instruction_number]);
     if(opC == comp_instr_type)
     {
-        int func = memory.instrs[instruction_number].comp.func;
+        int func = instr.comp.func;
         switch (func){
             case NOP_F:
                 //Literally does nothing.
@@ -144,7 +147,7 @@ void vm_run(VM *vm, int instruction_number) {
         }
     }
     if(opC == other_comp_instr_type){
-        int func = memory.instrs[instruction_number].comp.func;
+        int func = instr.comp.func;
 
         switch(func){
             case LIT_F:
@@ -162,36 +165,74 @@ void vm_run(VM *vm, int instruction_number) {
         }
     }
     if(opC == immed_instr_type){
-        int op = memory.instrs[instruction_number].immed.op;
+        immed_instr_t immed = instr.immed;
+        int op = immed.op;
         switch(op){
-            //
             case ADDI_O:
-                    
-            //ADDI
+                vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] += machine_types_sgnExt(immed.immed);
+                vm->stack_indexes[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
+                vm->pc++;
+                break;
             case ANDI_O:
-            //
+                vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] &= machine_types_zeroExt(immed.immed);
+                vm->stack_indexes[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
+                vm->pc++;
+                break;
             case BORI_O:
-            //
+                vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] |= machine_types_zeroExt(immed.immed);
+                vm->stack_indexes[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
+                vm->pc++;
+                break;
             case NORI_O:
-            //
+                vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] =  ~(machine_types_zeroExt(immed.immed) | (vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)]));
+                vm->stack_indexes[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
+                vm->pc++;
+                break;
             case XORI_O:
-            //
+                vm->stack[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] ^= machine_types_zeroExt(immed.immed);
+                vm->stack_indexes[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
+                vm->pc++;
+                break;
             case BEQ_O:
-            //
+                if (vm->registers[1] == vm->registers[immed.reg] + machine_types_formOffset(immed.offset)) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed);
+                }
+                break;
             case BGEZ_O:
-            //
+                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) >= 0) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                break;
             case BGTZ_O:
-            //
+                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) > 0) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                break;
             case BLEZ_O:
-            //
+                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) <= 0) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                break; 
             case BLTZ_O:
-            //
+                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) < 0) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                break;
             case BNE_O:
-            //
+                if (vm->registers[1] != vm->registers[immed.reg] + machine_types_formOffset(immed.offset)) {
+                    vm->pc--;
+                    vm->pc += machine_types_formOffset(immed.immed);
+                }
+                break;
         }
     }
     if (opC == jump_instr_type){
-        int binary = memory.instrs[instruction_number].jump.op;
+        int binary = instr.jump.op;
         switch(binary){
             case JMPA_O:
             //
@@ -202,12 +243,11 @@ void vm_run(VM *vm, int instruction_number) {
         }
     }
     if (opC == syscall_instr_type){
-        int binary = memory.instrs[instruction_number].syscall.func;
+        int binary = instr.syscall.func;
         switch(binary) {
             case exit_sc:
                 vm->tracing = false;
                 break;
         }
     }
-    vm->pc++;
 }
