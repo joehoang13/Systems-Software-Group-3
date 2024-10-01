@@ -3,13 +3,17 @@
 #include <stdlib.h>
 #include "../provided/bof.h"
 #include "../provided/machine_types.h"
+#include "../provided/regname.h"
 #include "../provided/instruction.h"
 
 // Initialize the VM with default values
 void vm_init(VM *vm) {
-    vm->sp = -1; // Stack pointer starts at -1 (empty stack)
     vm->ip = 0;  // Instruction pointer starts at the first instruction
     vm->program_size = 0;  // No program loaded initially
+    vm->pc = 0;
+    for (int i = 0; i < NUM_REGISTERS; i++) {
+        vm->registers[i] = 0; 
+    }
 }
 
 // Load the program (instructions) into the VM with debugging
@@ -20,47 +24,105 @@ void vm_load_program(VM *vm, const char *filename) {
         exit(EXIT_FAILURE);
     }
 
-    printf("Loading program from %s:\n", filename);
-
     // Read the instructions into the program array
-
     BOFFILE bf_file = bof_read_open(filename);
     BOFHeader bf_header = bof_read_header(bf_file);
     vm->bf_header = bf_header; 
 
     vm->pc = bf_header.text_start_address;
-    vm->gp = bf_header.data_start_address;
-    vm->fp = bf_header.stack_bottom_addr;
-    vm->sp = bf_header.stack_bottom_addr;
+    vm->registers[0] = bf_header.data_start_address;
+    vm->registers[1] = bf_header.stack_bottom_addr;
+    vm->registers[2] = bf_header.stack_bottom_addr;
 
-    for (int i = 0; i < bf_header.text_length; i++) {
-        bin_instr_t instr = instruction_read(bf_file);
-        memory.instrs[i] = instr;
+    vm->program_size = bf_header.text_length;
+
+    for (int i = 0; i < vm->program_size; i++) {
+        memory.instrs[i] = instruction_read(bf_file);
     }
 
     for (int i = 0; i < bf_header.data_length; i++) {
         word_type word = bof_read_word(bf_file);
-        memory.words[i] = word;
+        memory.words[vm->program_size + i] = word;
     }
+    memory.words[vm->program_size + bf_header.data_length] = 0;
+
+    vm->stack[vm->registers[1]] = 0;
+    vm->stack_indexes[vm->registers[1]] = 1;
 }
 
 // Print the loaded program for listing (-p flag)
 void vm_print_program(VM *vm) {
-    printf("PC: %d\n GP: %d\n FP:%d\n", vm->pc, vm->gp, vm->fp); //Debug: Get Header Values
-    printf("Text Length:%d\n", vm->bf_header.text_length); //Debug: Num Instructions
+    printf("Address Instruction\n");
 
-    for (int i = 0; i < vm->bf_header.text_length; i++) {
-        char* ins = instruction_assembly_form(i, memory.instrs[i]);
-        printf("Instruction: %s\n", ins);
+    for (int i = 0; i < vm->program_size; i++) {
+        printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
     }
-    
-    for (int i = 0; i < vm->bf_header.data_length; i++) {
-        printf("Word: %d\n", memory.words[i]);
+    print_words(vm);
+}
+
+void print_registers(VM *vm) {
+    printf("%8s: %d\t", "PC", vm->pc);
+    for (int i = 0; i < NUM_REGISTERS; i++ ) {
+        if (i % 5 == 0) {
+            printf("\n");
+        }
+        char buffer[100];
+        sprintf(buffer, "GPR[%-3s]", regname_get(i));
+        printf("%8s: %d\t", buffer, vm->registers[i]);
+    }
+    printf("\n"); 
+}
+
+void print_instruction(VM *vm, int instruction_number) {
+    printf("==>%8d: %s", instruction_number, instruction_assembly_form(1, memory.instrs[instruction_number]));
+}
+
+void print_words(VM *vm) {
+    int index;
+
+    for (index = 0; index < vm->bf_header.data_length; index++) {
+        if (index % 5 == 0 && index != 0) {
+            printf("\n");
+        }
+        printf("%8d: %d\t", vm->registers[0]+index, memory.words[vm->program_size + index]);
+    }
+    printf("%8d: %d\t", vm->registers[0]+vm->bf_header.data_length, memory.words[vm->program_size + vm->bf_header.data_length]);
+    if ((index+1) % 5 == 0) {
+        printf("\n%11s     \n", "...");
+    }
+    else if ((index+1) % 4 == 0) {
+        printf("%11s     \n\n", "...");
+    }
+    else if ((index+1) % 3 == 0) {
+        printf("%11s     \n\n", "...");
+    }
+    else {
+        printf("%11s     \n", "...");
+    }
+}
+
+void print_stack(VM *vm) {
+    bool dots_printed = false;
+    for (int i = vm->registers[1]; i <= vm->bf_header.stack_bottom_addr; i++) {
+        if (i % 5 == 0) {
+            printf("\n");
+        }
+        if (vm->stack_indexes[i] == 0) {
+            if (!dots_printed) {
+                printf("...");
+                dots_printed = true;
+            }
+            continue;
+        }
+        printf("%8d: %d\t", i, vm->stack[i]);
     }
 }
 
 // Simple Stack Machine execution with detailed debugging
 void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t *OpOther) {
+    print_registers(vm);
+    print_words(vm);
+    print_stack(vm);
     for (int i=0; i<0; i++){
          instr_type * opC = instruction_type(memory.instrs[i]);
             if(opC == 0){
@@ -212,10 +274,10 @@ void vm_run(VM *vm , comp_instr_t *Op0, other_comp_instr_t *Op1, syscall_instr_t
     
 
         // Debug: Print the current state of the stack after every instruction
-        printf("Stack state (sp=%d): [", vm->sp);
-        for (int i = 0; i <= vm->sp; i++) {
+        printf("Stack state (sp=%d): [", vm->registers[1]);
+        for (int i = 0; i <= vm->registers[1]; i++) {
             printf("%d", vm->stack[i]);
-            if (i < vm->sp) printf(", ");
+            if (i < vm->registers[1]) printf(", ");
         }
         printf("]\n");
     }
