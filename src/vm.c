@@ -11,6 +11,7 @@ void vm_init(VM *vm) {
     vm->ip = 0;  // Instruction pointer starts at the first instruction
     vm->program_size = 0;  // No program loaded initially
     vm->pc = 0;
+    vm->tracing = true;
     for (int i = 0; i < NUM_REGISTERS; i++) {
         vm->registers[i] = 0; 
     }
@@ -74,7 +75,7 @@ void print_registers(VM *vm) {
 }
 
 void print_instruction(VM *vm, int instruction_number) {
-    printf("==>%8d: %s", instruction_number, instruction_assembly_form(1, memory.instrs[instruction_number]));
+    printf("==>%8d: %s\n", instruction_number, instruction_assembly_form(1, memory.instrs[instruction_number]));
 }
 
 void print_words(VM *vm) {
@@ -116,95 +117,97 @@ void print_stack(VM *vm) {
         }
         printf("%8d: %d\t", i, vm->stack[i]);
     }
+    printf("\n");
 }
 
 // Simple Stack Machine execution with detailed debugging
-void vm_run(VM *vm) {
-    print_registers(vm);
-    print_words(vm);
-    print_stack(vm);
-
-    for (int i=0; i<vm->bf_header.text_length; i++){
-         instr_type opC = instruction_type(memory.instrs[i]);
-            if(opC == comp_instr_type)
-            {
-                int func = memory.instrs[i].comp.func;
-                switch (func){
-                    case NOP_F:
-                        //Literally does nothing.
-                    case ADD_F:
-                    case SUB_F:
-                    case CPW_F:
-                    case AND_F:
-                    case BOR_F:
-                    case NOR_F:
-                    case XOR_F:
-                    case LWR_F:
-                    case SWR_F:
-                    case SCA_F:
-                    case LWI_F:
-                    case NEG_F:
-                }
-            }
-            if(opC == other_comp_instr_type){
-                int func = memory.instrs[i].comp.func;
-
-                switch(func){
-                    case LIT_F:
-                    case ARI_F:
-                    case SRI_F:
-                    case MUL_F:
-                    case DIV_F:
-                    case CFHI_F:
-                    case CFLO_F:
-                    case SLL_F:
-                    case SRL_F:
-                    case JMP_F:
-                    case CSI_F:
-                    case JREL_F:
-                }
-            }
-            if(opC == immed_instr_type){
-                int op = memory.instrs[i].immed.op;
-                switch(op){
-                    //
-                    case ADDI_O:
-                    //ADDI
-                    case ANDI_O:
-                    //
-                    case BORI_O:
-                    //
-                    case NORI_O:
-                    //
-                    case XORI_O:
-                    //
-                    case BEQ_O:
-                    //
-                    case BGEZ_O:
-                    //
-                    case BGTZ_O:
-                    //
-                    case BLEZ_O:
-                    //
-                    case BLTZ_O:
-                    //
-                    case BNE_O:
-                    //
-                }
-            }
-            if (opC == jump_instr_type){
-                int binary = memory.instrs[i].jump.op;
-                switch(binary){
-                    case JMPA_O:
-                    //
-                    case CALL_O:
-                    //
-                    case RTN_O:
-                    //
-                }
-            }
-            if (opC == syscall_instr_type){
-                int binary = memory.instrs[i].syscall.func;
-            }
+void vm_run(VM *vm, int instruction_number) {
+    instr_type opC = instruction_type(memory.instrs[instruction_number]);
+    if(opC == comp_instr_type)
+    {
+        int func = memory.instrs[instruction_number].comp.func;
+        switch (func){
+            case NOP_F:
+                //Literally does nothing.
+            case ADD_F:
+            case SUB_F:
+            case CPW_F:
+            case AND_F:
+            case BOR_F:
+            case NOR_F:
+            case XOR_F:
+            case LWR_F:
+            case SWR_F:
+            case SCA_F:
+            case LWI_F:
+            case NEG_F:
+        }
     }
+    if(opC == other_comp_instr_type){
+        int func = memory.instrs[instruction_number].comp.func;
+
+        switch(func){
+            case LIT_F:
+            case ARI_F:
+            case SRI_F:
+            case MUL_F:
+            case DIV_F:
+            case CFHI_F:
+            case CFLO_F:
+            case SLL_F:
+            case SRL_F:
+            case JMP_F:
+            case CSI_F:
+            case JREL_F:
+        }
+    }
+    if(opC == immed_instr_type){
+        int op = memory.instrs[instruction_number].immed.op;
+        switch(op){
+            //
+            case ADDI_O:
+                    
+            //ADDI
+            case ANDI_O:
+            //
+            case BORI_O:
+            //
+            case NORI_O:
+            //
+            case XORI_O:
+            //
+            case BEQ_O:
+            //
+            case BGEZ_O:
+            //
+            case BGTZ_O:
+            //
+            case BLEZ_O:
+            //
+            case BLTZ_O:
+            //
+            case BNE_O:
+            //
+        }
+    }
+    if (opC == jump_instr_type){
+        int binary = memory.instrs[instruction_number].jump.op;
+        switch(binary){
+            case JMPA_O:
+            //
+            case CALL_O:
+            //
+            case RTN_O:
+            //
+        }
+    }
+    if (opC == syscall_instr_type){
+        int binary = memory.instrs[instruction_number].syscall.func;
+        switch(binary) {
+            case exit_sc:
+                vm->tracing = false;
+                break;
+        }
+    }
+    vm->pc++;
 }

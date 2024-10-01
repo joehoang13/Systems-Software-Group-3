@@ -27,16 +27,18 @@ typedef struct {
     int32_t ip;                 // Instruction pointer
     int32_t program[MEMORY_SIZE_IN_WORDS]; // Program memory (loaded instructions)
     int32_t program_size;       // Size of the loaded program
+    bool tracing;               
 } VM;
 
 // Function declarations
 void vm_load_program(VM *vm, const char *filename);
 void vm_print_program(VM *vm);
-void vm_run(VM *vm);
+void vm_run(VM *vm, int instruction_number);
 void vm_init(VM *vm);
 void print_registers(VM *vm);
 void print_instruction(VM *vm, int instruction_number);
 void print_words(VM *vm);
+void print_stack(VM *vm);
 
 
 #endif // VM_H
