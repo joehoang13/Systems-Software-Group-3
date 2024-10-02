@@ -194,48 +194,56 @@ void vm_run(VM *vm, int instruction_number) {
             case LIT_F:
                 vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = machine_types_sgnExt(instr.othc.arg);
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
-                break;
                 vm->pc++;
+                break;
             case ARI_F:
                 vm->registers[instr.othc.reg] = (vm->registers[instr.othc.reg] + machine_types_sgnExt(instr.othc.arg));
+                vm->pc++;
                 break;
             case SRI_F:
                 vm->registers[instr.othc.reg] = (vm->registers[instr.othc.reg] - machine_types_sgnExt(instr.othc.arg));
+                vm->pc++;
                 break;
             case MUL_F:
                 vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] * (vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)]);
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case DIV_F:
                 vm->HI = vm->stack[vm->registers[1]] % (vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)]);
                 vm->LO = vm->stack[vm->registers[1]] / (vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)]);
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case CFHI_F:
                 vm->stack[vm->stack[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->HI;
                 vm->stack_indexes[vm->stack[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case CFLO_F:
                 vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->LO;
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case SLL_F:
                 vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] << instr.othc.arg;
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case SRL_F:
                 vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->stack[vm->registers[1]] >> instr.othc.arg;
                 vm->stack_indexes[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
+                vm->pc++;
                 break;
             case JMP_F:
                 vm->pc = vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)];
                 break;
             case CSI_F:
-                vm->registers[7] = vm->pc;  vm->pc = vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)];
+                vm->registers[7] = vm->pc;
+                vm->pc = vm->stack[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)];
                 break;
             case JREL_F:
                 vm->pc = ((vm->pc - 1) + machine_types_formOffset(instr.othc.offset));
-                vm->pc++;
                 break;
         }
     }
