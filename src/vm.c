@@ -111,50 +111,71 @@ void vm_run(VM *vm, int instruction_number) {
                 break;
             case ADD_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = memory.words[vm->registers[1]] + (memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)]);
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
+                vm->words_index[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)] = 1;
                 vm->pc++;
                 break;
             case SUB_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = memory.words[vm->registers[1]] - (memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)]);
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
+                vm->words_index[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)] = 1;
                 vm->pc++;
                 break;
             case CPW_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.ot)];
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
+                vm->words_index[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.ot)] = 1;
                 vm->pc++;
                 break;
             case AND_F:
                 memory.words[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = memory.words[vm->registers[1]] & memory.words[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->words_index[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = 1;
+                vm->words_index[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]] = 1;
                 vm->pc++;
                 break;
             case BOR_F:
                 memory.words[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = memory.words[vm->registers[1]] | memory.words[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->words_index[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = 1;
+                vm->words_index[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]] = 1;
                 vm->pc++;
                 break;
             case NOR_F:
                 memory.words[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = ~(memory.words[vm->registers[1]] | memory.words[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]]);
+                vm->words_index[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = 1;
+                vm->words_index[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]] = 1;
                 vm->pc++;
                 break;
             case XOR_F: 
                 memory.words[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = memory.words[vm->registers[1]] ^ memory.words[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]];
+                vm->words_index[vm->registers[instr.comp.rt + machine_types_formOffset(instr.comp.ot)]] = 1;
+                vm->words_index[vm->registers[instr.comp.rs + machine_types_formOffset(instr.comp.os)]] = 1;
                 vm->pc++;
                 break;
             case LWR_F:
                 vm->registers[instr.comp.rt] = memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)];
+                vm->words_index[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)] = 1;
                 vm->pc++;
                 break;
             case SWR_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = vm->registers[instr.comp.rs];
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
                 vm->pc++;
                 break;
             case SCA_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = (vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os));
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
                 vm->pc++;
                 break;
             case LWI_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = memory.words[memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.rs)]];
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
+                vm->words_index[memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.rs)]] = 1;
                 vm->pc++;
                 break;
             case NEG_F:
                 memory.words[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = -memory.words[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)];
+                vm->words_index[vm->registers[instr.comp.rt] + machine_types_formOffset(instr.comp.ot)] = 1;
+                vm->words_index[vm->registers[instr.comp.rs] + machine_types_formOffset(instr.comp.os)] = 1;
                 vm->pc++;
                 break;
         }
@@ -165,6 +186,7 @@ void vm_run(VM *vm, int instruction_number) {
         switch(func){
             case LIT_F:
                 memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = machine_types_sgnExt(instr.othc.arg);
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case ARI_F:
@@ -177,6 +199,7 @@ void vm_run(VM *vm, int instruction_number) {
                 break;
             case MUL_F:
                 memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = memory.words[vm->registers[1]] * (memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)]);
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case DIV_F:
@@ -186,26 +209,32 @@ void vm_run(VM *vm, int instruction_number) {
                 break;
             case CFHI_F:
                 memory.words[memory.words[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->HI;
+                vm->words_index[memory.words[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case CFLO_F:
                 memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = vm->LO;
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case SLL_F:
                 memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = memory.words[vm->registers[1]] << instr.othc.arg;
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case SRL_F:
                 memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = memory.words[vm->registers[1]] >> instr.othc.arg;
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 vm->pc++;
                 break;
             case JMP_F:
                 vm->pc = memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)];
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 break;
             case CSI_F:
                 vm->registers[7] = vm->pc;
                 vm->pc = memory.words[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)];
+                vm->words_index[vm->registers[instr.othc.reg] + machine_types_formOffset(instr.othc.offset)] = 1;
                 break;
             case JREL_F:
                 vm->pc = ((vm->pc - 1) + machine_types_formOffset(instr.othc.offset));
@@ -223,18 +252,22 @@ void vm_run(VM *vm, int instruction_number) {
                 break;
             case ANDI_O:
                 memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] &= machine_types_zeroExt(immed.immed);
+                vm->words_index[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
                 vm->pc++;
                 break;
             case BORI_O:
                 memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] |= machine_types_zeroExt(immed.immed);
+                vm->words_index[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
                 vm->pc++;
                 break;
             case NORI_O:
                 memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] =  ~(machine_types_zeroExt(immed.immed) | (memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)]));
+                vm->words_index[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
                 vm->pc++;
                 break;
             case XORI_O:
                 memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] ^= machine_types_zeroExt(immed.immed);
+                vm->words_index[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
                 vm->pc++;
                 break;
             case BEQ_O:
