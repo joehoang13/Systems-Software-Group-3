@@ -1,0 +1,711 @@
+/* $Id: machine.c,v 1.29 2023/11/28 22:30:07 leavens Exp leavens $ */
+#include <stdio.h>
+#include <stdlib.h>
+#include <stdbool.h>
+#include <assert.h>
+#include <math.h>
+#include "machine_types.h"
+#include "machine.h"
+#include "regname.h"
+#include "utilities.h"
+
+#define MAX_PRINT_WIDTH 59
+
+// tags for types of data
+typedef enum {byte_tag, int_tag, address_tag, instr_tag, float_tag
+} data_tag_e;
+
+// track the types of all the words in memory (bytes are future work)
+static data_tag_e memory_tags[MEMORY_SIZE_IN_WORDS];
+
+// the VM's memory, both in byte, word, and binary instruction views.
+static union mem_u {
+    byte_type bytes[MEMORY_SIZE_IN_BYTES];
+    int_type ints[MEMORY_SIZE_IN_WORDS];
+    float_type floats[MEMORY_SIZE_IN_WORDS];
+    bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
+} memory;
+
+// track the types of each register
+static data_tag_e GPR_tags[NUM_REGISTERS];
+
+// general purpose registers
+static union gpr_u {
+    int_type ints[NUM_REGISTERS];
+    float_type floats[NUM_REGISTERS];
+} GPR;
+// hi and lo registers used in integer multiplication and division,
+// and a view as a long (int)
+static union longAs2words_u {
+    long int result;
+    int hilo[2];  // lo is index 0, hi is index 1
+                  // because the x86 is little-endian
+} hilo_regs;
+
+// lo is index 0, hi is index 1, because the x86 is little-endian
+#define LO 0
+#define HI 1
+
+// the program counter
+static address_type PC;
+
+// should the machine be printing tracing output?
+static bool tracing;
+
+// words of instructions loaded (based on the header)
+static unsigned int instructions_loaded;
+// words of global int data (based on the header)
+static unsigned int global_data_ints;
+// words of global float data (based on the header)
+static unsigned int global_data_floats;
+
+// the bottom of the stack from the BOF file, for tracing purposes
+static unsigned int stack_bottom_address;
+
+// should the machine be running? (default true)
+static bool running;
+
+// set up the state of the machine
+static void initialize()
+{
+    tracing = false;   // default for tracing
+    instructions_loaded = 0;
+    global_data_ints = 0;
+    global_data_floats = 0;
+    running = true;
+
+    // zero the registers
+    for (int j = 0; j < NUM_REGISTERS; j++) {
+	GPR_tags[j] = int_tag;
+	GPR.ints[j] = 0;
+    }
+    // some registers always hold addresses
+    for (int j = GP; j < NUM_REGISTERS; j++) {
+	GPR_tags[j] = address_tag;
+    }
+    hilo_regs.result = 0;
+    // zero out the memory
+    for (int i = 0; i < MEMORY_SIZE_IN_WORDS; i++) {
+	memory_tags[i] = int_tag;
+	memory.ints[i] = 0;
+    }
+}
+
+// Requires: bf is a binary object file that is open for reading
+// Load count instructions in bf into the memory starting at address 0.
+// If any errors are encountered, exit with an error message.
+static void load_instructions(BOFFILE bf, int count)
+{
+    for (int i = 0; i < count; i++) {
+	memory_tags[i] = instr_tag;
+	memory.instrs[i] = instruction_read(bf);
+    }
+}
+
+// Requires: bf is a binary object file that is open for reading
+// Load count ints in bf into the memory starting at address start,
+// which is a word address.
+// If any errors are encountered, exit with an error message.
+static void load_int_data(BOFFILE bf, int count, unsigned int start)
+{
+    for (int i = 0; i < count; i++) {
+	memory_tags[start+i] = int_tag;
+	memory.ints[start+i] = bof_read_int(bf);
+    }
+}
+
+// Requires: bf is a binary object file that is open for reading
+// Load count ints in bf into the memory starting at address start,
+// which is a word address.
+// If any errors are encountered, exit with an error message.
+static void load_float_data(BOFFILE bf, int count, unsigned int start)
+{
+    for (int i = 0; i < count; i++) {
+	memory_tags[start+i] = float_tag;
+	memory.floats[start+i] = bof_read_float(bf);
+    }
+}
+
+// Requires: bf is open for reading in binary
+// Load the binary object file bf, and get ready to run it
+void machine_load(BOFFILE bf)
+{
+    initialize();
+
+    // read and check the header
+    BOFHeader bh = bof_read_header(bf);
+    if (bh.text_start_address % BYTES_PER_WORD != 0) {
+	bail_with_error("PC starting address (%u) is not divisible by %d!",
+			bh.text_start_address, BYTES_PER_WORD);
+    }
+    if (bh.text_length >= bh.data_start_address) {
+	bail_with_error("%s (%u) %s (%u)!",
+			"Text, i.e., program length", bh.text_length,
+			"is not less than the start address of the global data",
+			bh.data_start_address);
+    }
+    if (bh.data_start_address % BYTES_PER_WORD != 0) {
+	bail_with_error("Data start address (%u) is not divisible by %d",
+			bh.data_start_address, BYTES_PER_WORD);
+    }
+    if (bh.data_start_address + bh.ints_length + bh.floats_length
+	      >= bh.stack_bottom_addr) {
+	bail_with_error("%s (%u) + %s (%u) %s (%u)!",
+			"Global data start address", bh.data_start_address,
+			"global data length",
+			 bh.ints_length + bh.floats_length,
+			"is not less than the stack bottom address",
+			bh.stack_bottom_addr);
+    }
+    if (bh.stack_bottom_addr % BYTES_PER_WORD != 0) {
+	bail_with_error("Stack bottom address (%u) is not divisible by %d",
+			bh.stack_bottom_addr, BYTES_PER_WORD);
+    }
+    if (bh.stack_bottom_addr >= MEMORY_SIZE_IN_BYTES) {
+	bail_with_error("%s (%u) %s (%u)!",
+			"stack_bottom_addr", bh.stack_bottom_addr,
+			"is not less than the memory size",
+			MEMORY_SIZE_IN_BYTES);
+    }
+
+    // load the program
+    instructions_loaded = bh.text_length / BYTES_PER_WORD;
+    load_instructions(bf, instructions_loaded);
+
+    global_data_ints = bh.ints_length / BYTES_PER_WORD;
+    global_data_floats = bh.floats_length / BYTES_PER_WORD;
+    
+    load_int_data(bf, global_data_ints,
+	      bh.data_start_address / BYTES_PER_WORD);
+    load_float_data(bf, global_data_floats,
+		    (bh.data_start_address / BYTES_PER_WORD)
+		    + global_data_ints);
+
+    // initialize the registers
+    PC = bh.text_start_address;
+
+    // save the address of the stack bottom, as specified in the BOF file
+    stack_bottom_address = bh.stack_bottom_addr;
+
+    GPR.ints[GP] = bh.data_start_address;
+    GPR.ints[SP] = stack_bottom_address;
+    GPR.ints[FP] = stack_bottom_address;
+    // to simulate a call, put the stack bottom address in a0
+    GPR.ints[A0] = stack_bottom_address;
+}
+
+// print the memory location at word address a to out
+// (using the byte address, which is WORDS_PER_BYTE times a)
+// with a format determined by the given tag
+static int print_loc(FILE *out, int a, data_tag_e tag)
+{
+    address_type ba = a * BYTES_PER_WORD;
+    int count;
+    switch (tag) {
+    case address_tag:
+	count = fprintf(out, "%8d: %u\t", ba, memory.ints[a]);
+	break;
+    case int_tag: case byte_tag:
+	count = fprintf(out, "%8d: %d\t", ba, memory.ints[a]);
+	break;
+    case float_tag:
+	count = fprintf(out, "%8d: %f\t", ba, memory.floats[a]);
+	break;
+    default:
+	bail_with_error("Bad data_tag_e (%d) passed to print_loc", tag);
+	break;
+    }
+    return count;
+}
+
+// print the address given and 
+static void print_instruction(FILE *out, address_type a, bin_instr_t bi)
+{
+    fprintf(out, "%4d %s\n", a, instruction_assembly_form(bi));
+}
+
+// print the word memory in a format appropriate for the type of data
+// stored there, based on the memory's tag,
+// between start (inclusive) and end (exclusive) to out,
+// without a newline and eliding most elements that are 0
+static bool print_memory_nonzero(FILE *out, int start, int end)
+{
+    // initiaize printed_trailing_newline to true
+    // in case there is no data to print
+    bool printed_trailing_newline = true;
+    bool no_dots_yet = true;
+    // count of chars on a line
+    int lc = 0;
+    for (int a = start; a < end; a++) {
+	data_tag_e tag = memory_tags[a];
+	if ((tag != float_tag && memory.ints[a] != 0)
+	    || (tag == float_tag && memory.floats[a] != 0.0)) {
+	    lc += print_loc(out, a, tag);
+	    printed_trailing_newline = false;
+	    no_dots_yet = true;
+	} else {
+	    if (no_dots_yet) {
+		lc += print_loc(out, a, tag);
+		lc += fprintf(out, "...");
+		printed_trailing_newline = false;
+		no_dots_yet = false;
+	    }
+	}
+	if (lc > MAX_PRINT_WIDTH) {
+	    newline(out);
+	    printed_trailing_newline = true;
+	    lc = 0;
+	}
+    }
+    return printed_trailing_newline;
+}
+
+// print the nonzero memory locations between start and end on out,
+// a trailing newline was printed if the result is true
+static bool print_memory_words(FILE *out, int start, int end)
+{
+    return print_memory_nonzero(out, start, end);
+}
+
+// Print the non-zero global data from GPR.ints[GP],
+// by printing in int format for global_data_ints words
+// and then in floating-point format for global_data_floats words
+static void print_global_data(FILE *out)
+{
+    int global_wa = GPR.ints[GP] / BYTES_PER_WORD;
+    int past_int_wa = global_wa + global_data_ints;
+    bool printed_nl = print_memory_words(out, global_wa, past_int_wa);
+    if (!printed_nl) {
+	newline(out);
+	printed_nl = true; // in case there is no float data
+    }
+    int first_float_wa = past_int_wa;
+    printed_nl = print_memory_words(out, first_float_wa,
+				    first_float_wa + global_data_floats);
+    if (!printed_nl) {
+	newline(out);
+    }
+}
+
+// Requires: a program has been loaded into the computer's memory
+// print a heading and the program and any global data
+// that were previously loaded into the VM's memory to out
+void machine_print_loaded_program(FILE *out)
+{
+    // heading
+    instruction_print_table_heading(out);
+    // instructions
+    for (int wa = 0; wa < instructions_loaded; wa++) {
+	print_instruction(out, wa*BYTES_PER_WORD, memory.instrs[wa]);
+    }
+
+    print_global_data(out);
+}
+
+// Run the VM on the already loaded program,
+// producing any trace output called for by the program
+void machine_run(bool should_trace)
+{
+    tracing = should_trace;
+
+    if (tracing) {
+	machine_print_state(stdout);
+    }
+    machine_okay(); // check the invariant
+    // execute the program
+    while (running) {
+	machine_trace_execute_instr(stdout,
+				    memory.instrs[PC/BYTES_PER_WORD]);
+	machine_okay(); // check the invariant
+    }
+    if (!running) {
+	debug_print("running is false!\n");
+    }
+}
+
+// Load the given binary object file and run it
+void machine_load_and_run(BOFFILE bf, bool should_trace)
+{
+    machine_load(bf);
+    machine_run(should_trace);
+}
+
+// If tracing then print bi, execute bi (always),
+// then if tracing print out the machine's state.
+// All tracing output goes to the FILE out
+void machine_trace_execute_instr(FILE *out, bin_instr_t bi)
+{
+    if (tracing) {
+	fprintf(out, "==> addr: ");
+	print_instruction(out, PC, bi);
+    }
+    machine_execute_instr(bi);
+    if (tracing) {
+	machine_print_state(out);
+    }
+}
+
+// Execute the given instruction, in the machine's current state
+void machine_execute_instr(bin_instr_t bi)
+{
+    // first, increment the PC
+    PC = PC + BYTES_PER_WORD;
+    
+    instr_type it = instruction_type(bi);
+    switch (it) {
+    case reg_instr_type:
+	{
+	    reg_instr_t ri = bi.reg;
+	    switch (ri.func) {
+	    case ADD_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rs] + GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case SUB_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rs] - GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case MUL_F:
+		hilo_regs.result = GPR.ints[ri.rs] * GPR.ints[ri.rt];
+		break;
+	    case DIV_F:
+		if (GPR.ints[ri.rt] == 0) {
+		    bail_with_error("Attempt to divide by zero!");
+		}
+		hilo_regs.hilo[HI] = GPR.ints[ri.rs] % GPR.ints[ri.rt];
+		hilo_regs.hilo[LO] = GPR.ints[ri.rs] / GPR.ints[ri.rt];
+		break;
+	    case FADD_F:
+		GPR.floats[ri.rd] = GPR.floats[ri.rs] + GPR.floats[ri.rt];
+		GPR_tags[ri.rd] = float_tag;
+		break;
+	    case FSUB_F:
+		GPR.floats[ri.rd] = GPR.floats[ri.rs] - GPR.floats[ri.rt];
+		GPR_tags[ri.rd] = float_tag;
+		break;
+	    case FMUL_F:
+		GPR.floats[ri.rd] = GPR.floats[ri.rs] * GPR.floats[ri.rt];
+		GPR_tags[ri.rd] = float_tag;
+		break;
+	    case FDIV_F:
+		GPR.floats[ri.rd] = GPR.floats[ri.rs] / GPR.floats[ri.rt];
+		GPR_tags[ri.rd] = float_tag;
+		break;
+	    case MFHI_F:
+		GPR.ints[ri.rd] = hilo_regs.hilo[HI];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case MFLO_F:
+		GPR.ints[ri.rd] = hilo_regs.hilo[LO];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case AND_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rs] & GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case BOR_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rs] | GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case NOR_F:
+		GPR.ints[ri.rd] = ~(GPR.ints[ri.rs] | GPR.ints[ri.rt]);
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case XOR_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rs] ^ GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case SLL_F:
+		GPR.ints[ri.rd] = GPR.ints[ri.rt] << ri.shift;
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case SRL_F:
+		GPR.ints[ri.rd] = ((unsigned int)GPR.ints[ri.rt]) >> ri.shift;
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case CVT_F:
+		GPR.floats[ri.rd] = (float) GPR.ints[ri.rt];
+		GPR_tags[ri.rd] = float_tag;
+		break;
+	    case RND_F:
+		GPR.ints[ri.rd] = round(GPR.floats[ri.rt]);
+		GPR_tags[ri.rd] = int_tag;
+		break;
+	    case JR_F:
+		PC = GPR.ints[ri.rs];
+		break;
+	    default:
+		bail_with_error("Invalid function code (%d) in machine_execute's register instruction case!",
+				ri.func);
+		break;
+	    }
+	}
+	break;
+    case syscall_instr_type:
+	switch (instruction_syscall_number(bi)) {
+	case exit_sc:
+	    running = false;
+	    exit(0);
+	    break;
+	case print_str_sc:
+	    GPR.ints[V0] = printf("%s", &memory.bytes[GPR.ints[A0]]);
+	    break;
+	case print_int_sc:
+	    GPR.ints[V0] = printf("%d", GPR.ints[A0]);
+	    break;
+	case print_float_sc:
+	    GPR.ints[V0] = printf("%f", GPR.floats[A0]);
+	    break;
+	case print_char_sc:
+	    GPR.ints[V0] = fputc(GPR.ints[A0], stdout);
+	    break;
+	case read_char_sc:
+	    GPR_tags[V0] = int_tag;
+	    GPR.ints[V0] = getc(stdin);
+	    break;
+	case read_float_sc:
+	    GPR_tags[V0] = float_tag;
+	    fscanf(stdin, "%f", &GPR.floats[V0]);
+	    break;
+	case start_tracing_sc:
+	    tracing = true;
+	    break;
+	case stop_tracing_sc:
+	    tracing = false;
+	    break;
+	default:
+	    bail_with_error("Invalid system call type (%d) in machine_execute's syscall instruction case!",
+			    instruction_syscall_number(bi));
+	}
+	break;
+    case immed_instr_type:
+	{
+	    immed_instr_t ii = bi.immed;
+	    switch (ii.op) {
+	    case ADDI_O:
+		GPR_tags[ii.rt] = int_tag;
+		GPR.ints[ii.rt] = GPR.ints[ii.rs] + machine_types_sgnExt(ii.immed);
+		break;
+	    case ANDI_O:
+		GPR_tags[ii.rt] = int_tag;
+		GPR.ints[ii.rt] = GPR.ints[ii.rs] & machine_types_zeroExt(ii.immed);
+		break;
+	    case BORI_O:
+		GPR_tags[ii.rt] = int_tag;
+		GPR.ints[ii.rt] = GPR.ints[ii.rs] | machine_types_zeroExt(ii.immed);
+		break;
+	    case XORI_O:
+		GPR_tags[ii.rt] = int_tag;
+		GPR.ints[ii.rt] = GPR.ints[ii.rs] ^ machine_types_zeroExt(ii.immed);
+		break;
+	    case BEQ_O:
+		if (GPR.ints[ii.rs] == GPR.ints[ii.rt]) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BGEZ_O:
+		if (GPR.ints[ii.rs] >= 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BGTZ_O:
+		if (GPR.ints[ii.rs] > 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BLEZ_O:
+		if (GPR.ints[ii.rs] <= 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BLTZ_O:
+		if (GPR.ints[ii.rs] < 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BNE_O:
+		if (GPR.ints[ii.rs] != GPR.ints[ii.rt]) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFEQ_O:
+		if (GPR.floats[ii.rs] == GPR.floats[ii.rt]) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFGEZ_O:
+		if (GPR.floats[ii.rs] >= 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFGTZ_O:
+		if (GPR.floats[ii.rs] > 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFLEZ_O:
+		if (GPR.floats[ii.rs] <= 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFLTZ_O:
+		if (GPR.floats[ii.rs] < 0) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case BFNE_O:
+		if (GPR.floats[ii.rs] != GPR.floats[ii.rt]) {
+		    PC = PC + machine_types_formOffset(ii.immed);
+		}
+		break;
+	    case LBU_O:
+		{
+		    address_type ba = GPR.ints[ii.rs] + machine_types_formOffset(ii.immed);
+		    GPR.ints[ii.rt] = machine_types_zeroExt(memory.bytes[ba]);
+		}
+		break;
+	    case LW_O:
+		{
+		    address_type wa = (GPR.ints[ii.rs] + machine_types_formOffset(ii.immed))
+			/ BYTES_PER_WORD;
+		    GPR_tags[ii.rt] = int_tag;
+		    GPR.ints[ii.rt] = memory.ints[wa];
+		}
+		break;
+	    case FLW_O:
+		{
+		    address_type wa = (GPR.ints[ii.rs] + machine_types_formOffset(ii.immed))
+			/ BYTES_PER_WORD;
+		    GPR_tags[ii.rt] = float_tag;
+		    GPR.floats[ii.rt] = memory.floats[wa];
+		}
+		break;
+	    case SB_O:
+		{
+		    address_type ba = GPR.ints[ii.rs] + machine_types_formOffset(ii.immed);
+		    memory.bytes[ba] = GPR.ints[ii.rt];
+		}
+		break;
+	    case SW_O:
+		{
+		    address_type wa = (GPR.ints[ii.rs] + machine_types_formOffset(ii.immed))
+			/ BYTES_PER_WORD;
+		    memory_tags[wa] = int_tag;
+		    memory.ints[wa] = GPR.ints[ii.rt];
+		}
+		break;
+	    case FSW_O:
+		{
+		    address_type wa = (GPR.ints[ii.rs] + machine_types_formOffset(ii.immed))
+			/ BYTES_PER_WORD;
+		    memory_tags[wa] = float_tag;
+		    memory.floats[wa] = GPR.floats[ii.rt];
+		}
+		break;
+	    default:
+		bail_with_error("Invalid opcode (%d) in machine_execute's immediate instruction case!",
+				ii.op);	    
+		break;
+	    }
+	}
+	break;
+    case jump_instr_type:
+	{
+	    jump_instr_t ji = bi.jump;
+	    switch (ji.op) {
+	    case JMP_O:
+		PC = machine_types_formAddress(PC, ji.addr);
+		break;
+	    case JAL_O:
+		GPR.ints[RA] = PC;
+		PC = machine_types_formAddress(PC, ji.addr);
+		break;
+	    default:
+		bail_with_error("Invalid opcode (%d) in machine_execute's jump instruction case!",
+				ji.op);	    
+		break;
+	    }
+	}
+	break;
+    default:
+	bail_with_error("Invalid instruction type (%d) in machine_execute!",
+			it);
+	break;
+    }
+}
+
+// Should this register number be shown as a floating-point number?
+static bool isFloatReg(int j) {
+    return GPR_tags[j] == float_tag;
+}
+
+// print register number j to out
+static void print_register(FILE *out, int j)
+{
+    if (isFloatReg(j)) {
+	fprintf(out, "GPR[%-3s]: %-8f", regname_get(j), GPR.floats[j]);
+    } else {
+	fprintf(out, "GPR[%-3s]: %-8d", regname_get(j), GPR.ints[j]);
+    }
+}
+
+// Requires: out != NULL and out can be written on
+// Print the current values in the registers to out
+static void print_registers(FILE *out)
+{
+    // print the registers
+    fprintf(out, "%8s: %u", "PC", PC);
+    if (hilo_regs.result != 0L) {
+	fprintf(out, "\t%8s: %d\t%8s: %d", "HI", hilo_regs.hilo[HI], "LO", hilo_regs.hilo[LO]);
+    }
+    newline(out);
+    int j;
+
+    for (j = 0; j < (NUM_REGISTERS); /* nothing */) {
+	print_register(out, j);
+	j++;
+	for (int i = 0; i < 3 && j < (NUM_REGISTERS); i++) {
+	    fprintf(out, "\t");
+	    print_register(out, j);
+	    j++;
+	}
+	newline(out);
+    }
+}
+
+// Print non-zero global data between GPR.ints[SP] and stack_bottom_address inclusive
+static void print_runtime_stack_AR(FILE *out)
+{
+    // print the memory between sp and stack_bottom_address, inclusive
+    bool printed_nl = print_memory_words(out,
+					 GPR.ints[SP] / BYTES_PER_WORD,
+					 (stack_bottom_address / BYTES_PER_WORD)+1);
+    if (!printed_nl) {
+	newline(out);
+    }
+}
+
+// Requires: out != NULL and out can be written on
+// print the state of the machine (registers, globals, and
+// the memory between GPR.ints[$sp] and GPR.ints[$fp], inclusive) to out
+void machine_print_state(FILE *out)
+{
+    print_registers(out);
+    print_global_data(out);
+    print_runtime_stack_AR(out);
+}
+
+// Invariant test for the VM (for debugging purposes)
+// This exits with an assertion error if the invariant does not pass
+void machine_okay()
+{
+    assert(PC % BYTES_PER_WORD == 0);
+    assert(GPR.ints[GP] % BYTES_PER_WORD == 0);
+    assert(GPR.ints[SP] % BYTES_PER_WORD == 0);
+    assert(GPR.ints[FP] % BYTES_PER_WORD == 0);
+    assert(0 <= GPR.ints[GP]);
+    assert(GPR.ints[GP] < GPR.ints[SP]);
+    assert(GPR.ints[SP] <= GPR.ints[FP]);
+    assert(GPR.ints[FP] < MEMORY_SIZE_IN_BYTES);
+    assert(GPR.ints[0] == 0);
+}
