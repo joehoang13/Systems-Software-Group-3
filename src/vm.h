@@ -23,6 +23,8 @@ typedef struct {
     int32_t stack[MEMORY_SIZE_IN_WORDS];  // Stack for the machine
     int32_t stack_indexes[MEMORY_SIZE_IN_WORDS]; //Tracks valid indexes for the stack
     int32_t pc;
+    int32_t HI;
+    int32_t LO;
     int32_t registers[NUM_REGISTERS]; 
     int32_t ip;                 // Instruction pointer
     int32_t program[MEMORY_SIZE_IN_WORDS]; // Program memory (loaded instructions)
