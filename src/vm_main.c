@@ -19,7 +19,6 @@ int main(int argc, char *argv[]) {
         vm_load_program(&vm, argv[1]);
         print_registers(&vm);
         print_words(&vm);
-        print_stack(&vm);
         for (int i = 0; i < vm.program_size; i++) {
             if(vm.tracing) {
                 print_instruction(&vm, vm.pc);
@@ -28,7 +27,6 @@ int main(int argc, char *argv[]) {
             if (vm.tracing) {
                 print_registers(&vm);
                 print_words(&vm);
-                print_stack(&vm);
             }
         }
     } else {

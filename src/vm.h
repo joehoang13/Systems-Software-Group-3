@@ -20,8 +20,7 @@ static union mem_u {
 // Define the structure of the VM
 typedef struct {
     BOFHeader bf_header;        // Loaded BOF Header
-    int32_t stack[MEMORY_SIZE_IN_WORDS];  // Stack for the machine
-    int32_t stack_indexes[MEMORY_SIZE_IN_WORDS]; //Tracks valid indexes for the stack
+    int32_t words_index[MEMORY_SIZE_IN_WORDS]; 
     int32_t pc;
     int32_t HI;
     int32_t LO;
@@ -40,7 +39,6 @@ void vm_init(VM *vm);
 void print_registers(VM *vm);
 void print_instruction(VM *vm, int instruction_number);
 void print_words(VM *vm);
-void print_stack(VM *vm);
 
 
 #endif // VM_H
