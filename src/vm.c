@@ -223,27 +223,32 @@ void vm_run(VM *vm, int instruction_number) {
                 
                 switch(func){
                     case 1: 
-                        exit(machine_types_formOffset(offset));
+                        exit(machine_types_sgnExt(offset));
 
                         break;
 
                     case 2: 
-                        char* str = (char*)memory.words[vm->registers[reg] + machine_types_formOffset(offset)];
-                        printf("%s", str);
-                    
+                        char* str = (char*)&vm->stack[vm->registers[reg] + machine_types_formOffset(offset)];
+                        vm->registers[1] = printf("%s", str);
+
+                        break;
+                    case 3:
+                        int integer = (int)vm->stack[vm->registers[reg] + machine_types_formOffset(offset)];
+                        vm->registers[1] = printf("%d", str);
+
                         break;
 
                     case 4: 
-                        char ch = (char)memory.words[vm->registers[reg] + machine_types_formOffset(offset)];
-                        putchar(ch);    
-
+                        vm->registers[1] = fputc(vm->stack[vm->registers[reg] + machine_types_formOffset(offset)], stdout);
                         break;
 
                     case 5:
-                        char ch = getchar();
-                        (word_type) ch = memory.words[vm->registers[reg] + machine_types_formOffset(offset)];
-                        
+                        vm->registers[reg + machine_types_formOffset(offset)] = getc(stdin);
                         break;
+                    case 2046:
+                        vm->tracing = true;
+                    case 2047:
+                        vm->tracing = false;
                 }
 
                 break;
@@ -320,22 +325,14 @@ void vm_run(VM *vm, int instruction_number) {
         int binary = instr.jump.op;
         switch(binary){
             case JMPA_O:
-                vm->pc = machine_types_formOffset(vm->pc - 1, instr.jump.addr);
+                vm->pc = machine_types_formAddress(vm->pc - 1, instr.jump.addr);
                 break;
             case CALL_O:
                 vm->registers[7] = vm->pc;
-                vm->pc = machine_types_formOffset(vm->pc - 1, instr.jump.addr);
+                vm->pc = machine_types_formAddress(vm->pc - 1, instr.jump.addr);
                 break; 
             case RTN_O:
                 vm->pc = vm->registers[7];
-                break;
-        }
-    }
-    if (opC == syscall_instr_type){
-        int binary = instr.syscall.func;
-        switch(binary) {
-            case exit_sc:
-                vm->tracing = false;
                 break;
         }
     }
