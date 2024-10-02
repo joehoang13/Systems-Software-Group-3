@@ -21,7 +21,9 @@ int main(int argc, char *argv[]) {
         print_words(&vm);
         print_stack(&vm);
         for (int i = 0; i < vm.program_size; i++) {
-            print_instruction(&vm, vm.pc);
+            if(vm.tracing) {
+                print_instruction(&vm, vm.pc);
+            }
             vm_run(&vm, vm.pc);
             if (vm.tracing) {
                 print_registers(&vm);

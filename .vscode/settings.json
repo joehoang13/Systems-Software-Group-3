@@ -1,0 +1,7 @@
+{
+    "makefile.configureOnOpen": false,
+    "files.associations": {
+        "test": "c",
+        "regname.h": "c"
+    }
+}
