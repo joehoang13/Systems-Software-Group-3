@@ -11,12 +11,6 @@
 
 #define MEMORY_SIZE_IN_WORDS 32768
 
-static union mem_u {
-    word_type words[MEMORY_SIZE_IN_WORDS];
-    uword_type uwords[MEMORY_SIZE_IN_WORDS];
-    bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
-} memory;
-
 // Define the structure of the VM
 typedef struct {
     BOFHeader bf_header;        // Loaded BOF Header
