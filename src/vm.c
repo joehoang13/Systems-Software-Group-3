@@ -83,7 +83,7 @@ void print_instruction(VM *vm, int instruction_number) {
 void print_words(VM *vm) {
     int index;
     int count = 0;
-    for (index = vm->program_size; index < vm->bf_header.stack_bottom_addr; index++) {
+    for (index = vm->program_size; index <= vm->bf_header.stack_bottom_addr; index++) {
         if (vm->words_index[index] != 1) {
             continue;
         }
@@ -91,6 +91,7 @@ void print_words(VM *vm) {
             printf("\n");
         }
         printf("%8d: %d\t",  index, memory.words[index]);
+        count++;
     }
     printf("\n");
 }
@@ -217,6 +218,7 @@ void vm_run(VM *vm, int instruction_number) {
         switch(op){
             case ADDI_O:
                 memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] += machine_types_sgnExt(immed.immed);
+                vm->words_index[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] = 1;
                 vm->pc++;
                 break;
             case ANDI_O:
