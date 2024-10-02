@@ -17,6 +17,12 @@ void vm_init(VM *vm) {
     }
 }
 
+static union mem_u {
+    word_type words[MEMORY_SIZE_IN_WORDS];
+    uword_type uwords[MEMORY_SIZE_IN_WORDS];
+    bin_instr_t instrs[MEMORY_SIZE_IN_WORDS];
+} memory;
+
 // Load the program (instructions) into the VM with debugging
 void vm_load_program(VM *vm, const char *filename) {
     FILE *file = fopen(filename, "rb");
@@ -60,7 +66,23 @@ void vm_print_program(VM *vm) {
     for (int i = 0; i < vm->program_size; i++) {
         printf("%6d: %s\n", i, instruction_assembly_form(i, memory.instrs[i]));
     }
-    print_words(vm);
+    int count = 0;
+    for (int i = vm->bf_header.data_start_address; i <= vm->bf_header.data_start_address + vm->bf_header.data_length; i++) {
+        if (count % 5 == 0 && count != 0) {
+            printf("\n");
+        }
+        printf("%8d: %d\t",  i, memory.words[i]);
+        count++;
+    }
+    if (count % 5 == 0 && count != 0) {
+        printf("\n%11s     \n", "...");
+    }
+    else if (count == 1) {
+        printf("%11s     \n", "...");
+    }
+    else {
+        printf("%11s     \n\n", "...");
+    }
 }
 
 void print_registers(VM *vm) {
@@ -77,7 +99,7 @@ void print_registers(VM *vm) {
 }
 
 void print_instruction(VM *vm, int instruction_number) {
-    printf("==>%8d: %s\n", instruction_number, instruction_assembly_form(1, memory.instrs[instruction_number]));
+    printf("==>%7d: %s\n", instruction_number, instruction_assembly_form(1, memory.instrs[instruction_number]));
 }
 
 void print_words(VM *vm) {
@@ -271,39 +293,57 @@ void vm_run(VM *vm, int instruction_number) {
                 vm->pc++;
                 break;
             case BEQ_O:
-                if (vm->registers[1] == vm->registers[immed.reg] + machine_types_formOffset(immed.offset)) {
+                if (memory.words[vm->registers[1]] == memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)]) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed);
+                }
+                else {
+                    vm->pc++;
                 }
                 break;
             case BGEZ_O:
-                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) >= 0) {
+                if (memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] >= 0) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                else {
+                    vm->pc++;
                 }
                 break;
             case BGTZ_O:
-                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) > 0) {
+                if (memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] > 0) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                else {
+                    vm->pc++;
                 }
                 break;
             case BLEZ_O:
-                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) <= 0) {
+                if (memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] <= 0) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed); 
+                }
+                else {
+                    vm->pc++;
                 }
                 break; 
             case BLTZ_O:
-                if (vm->registers[immed.reg] + machine_types_formOffset(immed.offset) < 0) {
+                if (memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)] < 0) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed); 
                 }
+                else {
+                    vm->pc++;
+                }
                 break;
             case BNE_O:
-                if (vm->registers[1] != vm->registers[immed.reg] + machine_types_formOffset(immed.offset)) {
+                if (memory.words[vm->registers[1]] != memory.words[vm->registers[immed.reg] + machine_types_formOffset(immed.offset)]) {
                     vm->pc--;
                     vm->pc += machine_types_formOffset(immed.immed);
+                }
+                else {
+                    vm->pc++;
                 }
                 break;
         }
@@ -329,23 +369,28 @@ void vm_run(VM *vm, int instruction_number) {
         int offset = instr.syscall.offset;
         switch(code){
             case 1: 
+                printf("GFDJGDOFHGDFHGDFH");
+                print_instruction(vm, instruction_number);
                 exit(machine_types_sgnExt(offset));
                 vm->pc++;
                 break;
 
             case 2: 
                 char* str = (char*)&memory.words[vm->registers[reg] + machine_types_formOffset(offset)];
-                vm->registers[1] = printf("%s", str);
+                memory.words[vm->registers[1]] = printf("%s", str);
+                vm->words_index[vm->registers[1]] = 1;
                 vm->pc++;
                 break;
             case 3:
                 int integer = (int)memory.words[vm->registers[reg] + machine_types_formOffset(offset)];
-                vm->registers[1] = printf("%d", integer);
+                memory.words[vm->registers[1]] = printf("%d", integer);
+                vm->words_index[vm->registers[1]] = 1;
                 vm->pc++;
                 break;
 
             case 4: 
-                vm->registers[1] = fputc(memory.words[vm->registers[reg] + machine_types_formOffset(offset)], stdout);
+                memory.words[vm->registers[1]] = fputc(memory.words[vm->registers[reg] + machine_types_formOffset(offset)], stdout);
+                vm->words_index[vm->registers[1]] = 1;
                 vm->pc++;
                 break;
 
